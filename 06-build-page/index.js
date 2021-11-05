@@ -8,6 +8,43 @@ async function addProjectDist() {
 }
 addProjectDist()
 
+function createHTML() {
+  const pathIndex = path.join(__dirname, 'project-dist', 'index.html')
+  const newIndex = fs.createWriteStream(pathIndex)
+}
+createHTML()
+
+async function changeHTML() {
+  const templatePath = path.join(__dirname, 'template.html')
+  const indexPath = path.join(__dirname, 'project-dist', 'index.html')
+  const newPath = path.join(__dirname, 'components')
+  const components = await readdir(newPath, { withFileTypes: true })
+  const redableStream = fs.createReadStream(templatePath, 'utf-8')
+  let text = ''
+
+  redableStream.on('data', (chunk) => {
+    text = chunk
+    for (const component of components) {
+      const componentPath = path.join(newPath, component.name)
+      const componentParse = path.parse(componentPath)
+      const componentParseName = componentParse.name
+
+      fs.readFile(componentPath, 'utf-8', (err, data) => {
+        if (err) console.log(err)
+
+        if (path.extname(componentPath).slice(1) === 'html') {
+          text = text.replace(`{{${componentParseName}}}`, data)
+        }
+
+        fs.writeFile(indexPath, text, err => {
+          if (err) console.log(err)
+        })
+      })
+    }
+  })
+}
+changeHTML()
+
 async function addStyle() {
   try {
     const pathStyle = path.join(__dirname, 'project-dist', 'style.css')
@@ -36,70 +73,25 @@ async function addAssets() {
 
     const assets = await readdir(pathAssets, { withFileTypes: true })
     mkdir(pathAssetsCopy, { recursive: true }, () => { })
-  } catch (err) {
-    console.error(err)
-  }
-}
-addAssets()
 
-async function addFolder(folder) {
-  try {
-    const pathAssets = path.join(__dirname, 'assets', folder)
-    const pathAssetsCopy = path.join(__dirname, 'project-dist', 'assets', folder)
+    for (const asset of assets) {
+      const oldFilePath = path.join(pathAssets, asset.name)
+      const newFilePath = path.join(pathAssetsCopy, asset.name)
 
-    const files = await readdir(pathAssets, { withFileTypes: true })
-    mkdir(pathAssetsCopy, { recursive: true }, () => { })
+      const assetNumbers = await readdir(oldFilePath, { withFileTypes: true })
+      mkdir(newFilePath, { recursive: true }, () => {})
 
-    for (const file of files) {
-      if (file.isFile()) {
-        const oldFilePath = path.join(pathAssets, file.name)
-        const newFilePath = path.join(pathAssetsCopy, file.name)
-        await copyFile(oldFilePath, newFilePath)
+      for (const assetNumber of assetNumbers) {
+        if (assetNumber.isFile()) {
+          const oldFilePathAsset = path.join(oldFilePath, assetNumber.name)
+          const newFilePathAsset = path.join(newFilePath, assetNumber.name)
+  
+          await copyFile(oldFilePathAsset, newFilePathAsset)
+        }
       }
     }
   } catch (err) {
     console.error(err)
   }
 }
-addFolder('fonts')
-addFolder('img')
-addFolder('svg')
-
-function createHTML() {
-  const pathIndex = path.join(__dirname, 'project-dist', 'index.html')
-  const newIndex = fs.createWriteStream(pathIndex)
-}
-createHTML()
-
-async function changeHTML() {
-  const templatePath = path.join(__dirname, 'template.html')
-  const indexPath = path.join(__dirname, 'project-dist', 'index.html')
-  const newPath = path.join(__dirname, 'components')
-  const components = await readdir(newPath, { withFileTypes: true })
-  const redableStream = fs.createReadStream(templatePath, 'utf-8')
-  let text = ''
-
-  redableStream.on('data', (chunk) => {
-    text = chunk
-    for (const component of components) {
-      const componentPath = path.join(newPath, component.name)
-      const componentParse = path.parse(componentPath)
-      const componentParseName = componentParse.name
-
-      fs.readFile(componentPath, 'utf-8', (err, data) => {
-        if (err) console.log(err)
-        
-        if (path.extname(componentPath).slice(1) === 'html') {
-          text = text.replace(`{{${componentParseName}}}`, data)
-        }
-
-        fs.writeFile(indexPath, text, err => {
-          if (err) console.log(err)
-        })
-      })
-    }
-  })
-}
-changeHTML()
-
-
+addAssets()
