@@ -1,5 +1,5 @@
 const path = require('path')
-const { copyFile, mkdir, readdir } = require('fs/promises')
+const { copyFile, mkdir, readdir, rmdir } = require('fs/promises')
 const fs = require('fs')
 
 async function addProjectDist() {
@@ -8,19 +8,16 @@ async function addProjectDist() {
 }
 addProjectDist()
 
-function createHTML() {
-  const pathIndex = path.join(__dirname, 'project-dist', 'index.html')
-  const newIndex = fs.createWriteStream(pathIndex)
-}
-createHTML()
-
-async function changeHTML() {
+async function createHTML() {
   const templatePath = path.join(__dirname, 'template.html')
   const indexPath = path.join(__dirname, 'project-dist', 'index.html')
   const newPath = path.join(__dirname, 'components')
   const components = await readdir(newPath, { withFileTypes: true })
   const redableStream = fs.createReadStream(templatePath, 'utf-8')
   let text = ''
+
+  const pathIndex = path.join(__dirname, 'project-dist', 'index.html')
+  const newIndex = fs.createWriteStream(pathIndex)
 
   redableStream.on('data', (chunk) => {
     text = chunk
@@ -34,16 +31,15 @@ async function changeHTML() {
 
         if (path.extname(componentPath).slice(1) === 'html') {
           text = text.replace(`{{${componentParseName}}}`, data)
+          fs.writeFile(indexPath, text, err => {
+            if (err) console.log(err)
+          })
         }
-
-        fs.writeFile(indexPath, text, err => {
-          if (err) console.log(err)
-        })
       })
     }
   })
 }
-changeHTML()
+createHTML()
 
 async function addStyle() {
   try {
@@ -72,6 +68,7 @@ async function addAssets() {
     const pathAssetsCopy = path.join(__dirname, 'project-dist', 'assets')
 
     const assets = await readdir(pathAssets, { withFileTypes: true })
+    await rmdir(pathAssetsCopy, { recursive: true })
     mkdir(pathAssetsCopy, { recursive: true }, () => { })
 
     for (const asset of assets) {
@@ -79,13 +76,13 @@ async function addAssets() {
       const newFilePath = path.join(pathAssetsCopy, asset.name)
 
       const assetNumbers = await readdir(oldFilePath, { withFileTypes: true })
-      mkdir(newFilePath, { recursive: true }, () => {})
+      mkdir(newFilePath, { recursive: true }, () => { })
 
       for (const assetNumber of assetNumbers) {
         if (assetNumber.isFile()) {
           const oldFilePathAsset = path.join(oldFilePath, assetNumber.name)
           const newFilePathAsset = path.join(newFilePath, assetNumber.name)
-  
+
           await copyFile(oldFilePathAsset, newFilePathAsset)
         }
       }
