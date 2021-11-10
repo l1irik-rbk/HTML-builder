@@ -1,5 +1,5 @@
 const path = require('path')
-const { copyFile, mkdir, readdir, rmdir } = require('fs/promises')
+const { copyFile, mkdir, readdir, rm } = require('fs/promises')
 const fs = require('fs')
 
 async function addProjectDist() {
@@ -68,7 +68,7 @@ async function addAssets() {
     const pathAssetsCopy = path.join(__dirname, 'project-dist', 'assets')
 
     const assets = await readdir(pathAssets, { withFileTypes: true })
-    await rmdir(pathAssetsCopy, { recursive: true })
+    await rm(pathAssetsCopy, { recursive: true, force: true })
     mkdir(pathAssetsCopy, { recursive: true }, () => { })
 
     for (const asset of assets) {
